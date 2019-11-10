@@ -1,55 +1,64 @@
-#!/usr/bin/env python3
 import struct
 import json
 
 from collections import OrderedDict
 
 
-def readu32(file):
-    data = file.read(4)
-    return struct.unpack("I", data)[0]
-
-
-def read32(file):
-    data = file.read(4)
-    return struct.unpack("i", data)[0]
-
-
-def readfloat(file):
-    data = file.read(4)
-    return struct.unpack("f", data)[0]
-
-
-def readu16(file):
-    data = file.read(2)
-    return struct.unpack("H", data)[0]
-
-
-def read16(file):
-    data = file.read(2)
-    return struct.unpack("h", data)[0]
-
-
 def readu8(file):
+    """ Reads an unsigned byte from the file."""
     data = file.read(1)
     return struct.unpack("B", data)[0]
 
 
 def read8(file):
+    """ Reads a signed byte from the file."""
     data = file.read(1)
     return struct.unpack("b", data)[0]
+
+
+def readu16(file):
+    """ Reads two bytes bytes from the file, treating them as a 16 bit unsigned integer."""
+    data = file.read(2)
+    return struct.unpack("H", data)[0]
+
+
+def read16(file):
+    """ Reads two bytes bytes from the file, treating them as a 16 bit signed integer."""
+    data = file.read(2)
+    return struct.unpack("h", data)[0]
+
+
+def readu32(file):
+    """ Reads 4 bytes bytes from the file, treating them as a 32 bit unsigned integer."""
+    data = file.read(4)
+    return struct.unpack("I", data)[0]
+
+
+def read32(file):
+    """ Reads 4 bytes bytes from the file, treating them as a 32 bit signed integer."""
+    data = file.read(4)
+    return struct.unpack("i", data)[0]
+
+
+def readfloat(file):
+    """ Reads 4 bytes bytes from the file, treating them as a float."""
+    data = file.read(4)
+    return struct.unpack("f", data)[0]
 
 # size of byte chunks to read
 CHUNK_SIZE = 4096
 
 
 def read_partial_stream(file, offset, size):
-    """
-        Returns an iterator over 4k blocks of byte data.
+    """Returns an iterator over 4k blocks of byte data.
 
-        @param file an IOBase Stream, i.e. File
-        @param offset offset from where to read
-        @param size size of block to read
+    Args:
+        file: an IOBase Stream, i.e. File
+        offset: offset from where to read
+        size: size of block to read
+
+    Returns:
+        iterator with 4k blocks of byte arrays until the file stream is exhausted or size is reached.
 
     """
     remaining = size
@@ -80,10 +89,12 @@ def read_terminated_token(file, terminator_function):
 
 
 def null_terminated(byte):
+    """Filter to return true when the byte is 0x00."""
     return byte == b"\x00"
 
 
 def stream_bits(byte_stream, num_bits=1):
+    """Iterates over the byte stream, returning num_bits in each iteration."""
     bits_still_needed = num_bits
     current_value = 0
     for b in byte_stream:
@@ -115,51 +126,6 @@ def stream_bits(byte_stream, num_bits=1):
         yield current_value
 
 
-class Block:
-
-    """
-        Block of data read from the file. It is specified by it's start and length.
-    """
-
-    def __init__(self, name, start, file=None):
-        self.start = start
-        self.end = start
-        self.name = name
-        self.file = file
-        self.blocks = []
-
-    def start_block(self, name, start):
-        block = Block(name, start, self.file)
-        self.blocks.append(block)
-        return block
-
-    def block(self, name, file=None):
-        block = Block(name, 0, file if file else self.file)
-        self.blocks.append(block)
-        return block
-
-    def __enter__(self):
-        if self.file:
-            self.start = self.file.tell()
-        return self
-
-    def __exit__(self, type, value, traceback):
-        if self.file:
-            self.close_block(self.file.tell())
-
-    def close_block(self, end):
-        self.end = end
-
-    def get_childs(self):
-        return self.blocks
-
-    def sort(self):
-        self.blocks.sort(key=lambda block: block.start)
-
-    def __str__(self):
-        return "{}, {}".format(self.start, self.end)
-
-
 # serialisation stuff
 def object_attributes_to_ordered_dict(obj,  attributes):
     """Returns the specified attributes  from the object in an OrderedDict."""
@@ -171,6 +137,10 @@ def object_attributes_to_ordered_dict(obj,  attributes):
 
 
 class Encoder(json.JSONEncoder):
+
+    """Encoder for json.dumps to automatically serialize objects. The objects should have a function __serialize__(), which return the attibutes to serialize in a dict.
+    """
+
     def default(self, object):
         # is it an object and has the serializeable function? Then use that
         serializable_func = getattr(object, "__serialize__", None)
