@@ -21,6 +21,33 @@ def test_read16():
     assert -32513 == tools.read16(input)
 
 
+def test_readu32():
+    input = io.BytesIO(bytes([64, 32, 255, 128]))
+    assert 2164203584 == tools.readu32(input)
+
+
+def test_read32():
+    input = io.BytesIO(bytes([64, 32, 255, 128]))
+    assert -2130763712 == tools.read32(input)
+
+
+def test_readfloat():
+    input = io.BytesIO(bytes([0x00, 0x00, 0xc0, 0xbf]))
+    assert -1.5 == tools.readfloat(input)
+
+
+def test_read_partial_stream():
+    input = io.BytesIO(bytes([0x00] * 4097))
+    partial_stream = tools.read_partial_stream(input, 0, 4097)
+    
+    first_block = next(partial_stream)
+    assert 4096 == len(first_block)
+    
+    last_block = next(partial_stream)
+    assert 1 == len(last_block)
+    
+
+
 def test_stream_bits_one_byte():
     b = [0]
     assert [0] == list(tools.stream_bits(b,  8))
